@@ -25,17 +25,9 @@ jobs:
 
       - name: Configure build environment
         run: |
-          :: 1. Copy the environment baseline
-          copy env.vs2019.bat env.bat
-          
-          :: 2. FORCE the target platform environment variables to x64
-          echo set ARCH=x64>>env.bat
-          echo set PLATFORM=x64>>env.bat
-          echo set RIME_PLATFORM=x64>>env.bat
-          
-          :: 3. Export the standard git ref name
-          for /f "tokens=*" %%i in ('git describe --always') do set git_ref_name=%%i
-          echo git_ref_name=%git_ref_name%>>"%GITHUB_ENV%"
+          copy env.vs2022.bat env.bat
+          $git_ref_name = git describe --always
+          echo "git_ref_name=$git_ref_name" >> $env:GITHUB_ENV
 
 
       - name: Cache Boost
