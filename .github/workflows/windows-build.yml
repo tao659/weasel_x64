@@ -16,6 +16,9 @@ jobs:
       boost_version: 1.78.0
       BOOST_ROOT: ${{ github.workspace }}\deps\boost_1_78_0
       RIME_PLUGINS: ${{ inputs.rime_plugins }}
+    defaults:
+      run:
+        shell: cmd # 将所有步骤的默认 Shell 设为 CMD，免去逐个填写的麻烦
     steps:
       - name: Checkout last commit
         uses: actions/checkout@v4
@@ -26,8 +29,8 @@ jobs:
       - name: Configure build environment
         run: |
           copy env.vs2019.bat env.bat
-          $git_ref_name = git describe --always
-          echo "git_ref_name=$git_ref_name" >> $env:GITHUB_ENV
+          for /f "tokens=*" %%i in ('git describe --always') do set git_ref_name=%%i
+          echo git_ref_name=%git_ref_name%>>"%GITHUB_ENV%"
 
       - name: Cache Boost
         id: cache-boost
@@ -63,7 +66,6 @@ jobs:
       - name: Copy Rime files
         run: .\github.install.bat
 
-
       - name: Build Weasel
         id: build_weasel
         run: |
@@ -74,6 +76,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
+          name: weasel-build-artifacts # 【重要】v4 必须提供独一无二的 artifact 名称
           if-no-files-found: error
           path: |
             .\output\archives\weasel*.exe
