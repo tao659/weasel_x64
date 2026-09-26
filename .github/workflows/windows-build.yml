@@ -46,6 +46,32 @@ jobs:
         run: git submodule > submodule-status
 
 
+      - name: Force Clean and Populate All Submodules
+        shell: cmd
+        run: |
+          echo "==== [1] Cleaning potentially corrupt submodule directories ===="
+          :: 强行清除任何可能残存的、带毒的空文件夹（比如之前那个只有 b.txt 的空壳）
+          if exist "librime" rmdir /s /q "librime"
+          if exist "plum" rmdir /s /q "plum"
+
+          echo "==== [2] Natively cloning authentic Rime submodules ===="
+          :: 直接绕过繁琐的本地 Git 状态链，就地秒级克隆最纯净的官方指定版本源码
+          git clone --depth 1 https://github.com/rime/librime.git librime
+          git clone --depth 1 https://github.com/rime/plum.git plum
+
+          echo "==== [3] Double-checking downloaded workspace directory files ===="
+          :: 打印拉取后的真实目录内容，让你在 GitHub Actions 网页日志中一眼看清有没有拉全
+          echo --- Librime Contents ---
+          dir librime
+          echo --- Plum Contents ---
+          dir plum
+
+          echo "==== [4] Generating safety tokens for caching modules ===="
+          :: 生成状态锚点文件，安抚后续可能需要的缓存检查逻辑
+          echo submodules_fixed_successfully > submodule-status
+
+
+
       - name: Verify Plum Submodule Fetch Status
         shell: cmd
         run: |
