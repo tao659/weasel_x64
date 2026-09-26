@@ -120,14 +120,35 @@ jobs:
 
       - name: Build Weasel
         id: build_weasel
+        shell: cmd
         run: |
-          .\build.bat data
-          .\build.bat hant
-          .\build.bat installer
+          :: 1. Forcefully pre-create the exact target folder paths needed by the NSIS compiler
+          if not exist "output\archives" mkdir "output\archives"
+          
+          :: 2. Execute preset data and Hanzi data compilations
+          call .\build.bat data
+          call .\build.bat hant
+          
+          :: 3. Double-check that rime-install.bat is staged correctly in output/
+          if exist "plum\rime-install.bat" copy /Y "plum\rime-install.bat" "output\"
+          
+          :: 4. Run the installer packaging engine cleanly
+          call .\build.bat installer
+
+
+      - name: Locate and Debug Built Installer Files
+        shell: cmd
+        run: |
+          echo "==== Scanning entire output directory for generated files ===="
+          dir /s output\weasel*.exe
+          dir /s output\*.exe
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4	
+        uses: actions/upload-artifact@v4
         with:
+          name: weasel-build-package
           if-no-files-found: error
           path: |
-            .\output\archives\weasel*.exe
+            output\**\weasel*.exe
+            output\*.exe
+
