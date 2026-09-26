@@ -71,28 +71,6 @@ jobs:
           echo submodules_fixed_successfully > submodule-status
 
 
-
-      - name: Verify Plum Submodule Fetch Status
-        shell: cmd
-        run: |
-          echo "==== [1] Checking Git Submodule Status ===="
-          git submodule status
-          
-          echo "==== [2] Checking Plum Directory Contents ===="
-          if exist "plum" (
-              dir plum
-          ) else (
-              echo "Error: 'plum' directory does not even exist!"
-          )
-          
-          echo "==== [3] Checking Core File Presence ===="
-          if exist "plum\rime-install" (
-              echo "Success: 'plum\rime-install' core script found!"
-          ) else (
-              echo "Warning: 'plum\rime-install' is missing. Submodule might be empty."
-          )
-
-
       - name: Cache dependencies
         id: cache-deps
         uses: actions/cache@v4	
