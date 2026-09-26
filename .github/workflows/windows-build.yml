@@ -88,7 +88,34 @@ jobs:
         run: .\build.bat opencc
 
       - name: Copy Rime files
-        run: .\github.install.bat
+        shell: cmd
+        run: |
+          echo "==== [1] Downloading Prebuilt Librime Assets ===="
+          :: 模拟脚本原本的 curl 下载逻辑，确保抓取到正确的包
+          curl -LO https://github.com/rime/librime/releases/download/1.8.5/rime-08dd95f-Windows.7z
+          curl -LO https://github.com/rime/librime/releases/download/1.8.5/rime-deps-08dd95f-Windows.7z
+
+          echo "==== [2] Safely Extracting Archives without Pipes ===="
+          :: 【核心修复】使用 -y 自动覆盖，并使用 -bb0 完全关闭文件路径的打印，100% 避免 Break 信号
+          7z x -y -bb0 rime-08dd95f-Windows.7z -olibrime\
+          7z x -y -bb0 rime-deps-08dd95f-Windows.7z -olibrime\
+
+          echo "==== [3] Moving Files to Staging Paths ===="
+          :: 严格执行原脚本所需的复制逻辑，打通小狼毫编译依赖
+          if not exist "include" mkdir include
+          if not exist "lib" mkdir lib
+          if not exist "output" mkdir output
+          
+          copy /Y librime\dist\include\rime_*.h include\
+          copy /Y librime\dist\lib\rime.lib lib\
+          copy /Y librime\dist\lib\rime.dll output\
+
+          if not exist output\data\opencc mkdir output\data\opencc
+          copy /Y librime\share\opencc\*.* output\data\opencc\
+          
+          echo "==== [4] Verification ===="
+          dir output\data\opencc
+
 
 
       - name: Build Weasel
