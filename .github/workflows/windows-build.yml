@@ -12,9 +12,6 @@ on:
 jobs:
   build:
     runs-on: windows-2022
-    defaults:
-      run:
-        shell: cmd 
     env:
       boost_version: 1.84.0
       BOOST_ROOT: ${{ github.workspace }}\deps\boost_1_84_0
@@ -28,14 +25,9 @@ jobs:
 
       - name: Configure build environment
         run: |
-          :: 1. 【核心修改】使用官方自带的 XP/Win7 兼容环境模板，代替原本的 vs2019 模板
           copy env.vs2019.bat env.bat
-          
-          
-          :: 3. 导出 Git 版本号
-          for /f "tokens=*" %%i in ('git describe --always') do set git_ref_name=%%i
-          echo git_ref_name=%git_ref_name%>>"%GITHUB_ENV%"
-
+          $git_ref_name = git describe --always
+          echo "git_ref_name=$git_ref_name" >> $env:GITHUB_ENV
 
 
       - name: Cache Boost
@@ -58,6 +50,7 @@ jobs:
         shell: cmd
         run: |
           echo "==== [1] Cleaning potentially corrupt submodule directories ===="
+          :: 强行清除任何可能残存的、带毒的空文件夹（比如之前那个只有 b.txt 的空壳）
           if exist "librime" rmdir /s /q "librime"
           if exist "plum" rmdir /s /q "plum"
 
