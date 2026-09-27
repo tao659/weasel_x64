@@ -16,8 +16,8 @@ jobs:
       run:
         shell: cmd 
     env:
-      boost_version: 1.83.0
-      BOOST_ROOT: ${{ github.workspace }}\deps\boost_1_83_0
+      boost_version: 1.84.0
+      BOOST_ROOT: ${{ github.workspace }}\deps\boost_1_84_0
       RIME_PLUGINS: ${{ inputs.rime_plugins }}
     steps:
       - name: Checkout last commit
@@ -29,7 +29,7 @@ jobs:
       - name: Configure build environment
         run: |
           :: 1. 【核心修改】使用官方自带的 XP/Win7 兼容环境模板，代替原本的 vs2019 模板
-          copy env.vs2022.bat env.bat
+          copy env.vs2019.bat env.bat
           
           :: 2. 强制指定纯 x64 架构变量（与你 weasel_x64 的定位完全对齐）
           echo set ARCH=x64>>env.bat
