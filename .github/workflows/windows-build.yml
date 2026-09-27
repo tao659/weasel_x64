@@ -25,9 +25,18 @@ jobs:
 
       - name: Configure build environment
         run: |
-          copy env.vs2022.bat env.bat
-          $git_ref_name = git describe --always
-          echo "git_ref_name=$git_ref_name" >> $env:GITHUB_ENV
+          :: 1. 【核心修改】使用官方自带的 XP/Win7 兼容环境模板，代替原本的 vs2019 模板
+          copy env.vs2017_xp.bat env.bat
+          
+          :: 2. 强制指定纯 x64 架构变量（与你 weasel_x64 的定位完全对齐）
+          echo set ARCH=x64>>env.bat
+          echo set PLATFORM=x64>>env.bat
+          echo set RIME_PLATFORM=x64>>env.bat
+          
+          :: 3. 导出 Git 版本号
+          for /f "tokens=*" %%i in ('git describe --always') do set git_ref_name=%%i
+          echo git_ref_name=%git_ref_name%>>"%GITHUB_ENV%"
+
 
 
       - name: Cache Boost
