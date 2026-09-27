@@ -62,7 +62,6 @@ jobs:
         shell: cmd
         run: |
           echo "==== [1] Cleaning potentially corrupt submodule directories ===="
-          :: 强行清除任何可能残存的、带毒的空文件夹（比如之前那个只有 b.txt 的空壳）
           if exist "librime" rmdir /s /q "librime"
           if exist "plum" rmdir /s /q "plum"
 
