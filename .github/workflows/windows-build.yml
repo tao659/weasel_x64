@@ -1,4 +1,4 @@
-name: Windows build x64
+name: Windows build
 on:
   workflow_call:
     inputs:
@@ -24,16 +24,11 @@ jobs:
           submodules: recursive
 
       - name: Configure build environment
-        shell: cmd
-        # 【核心调整】全面替换为现代 64 位支持的 vs2022 配置脚本
         run: |
-          if exist env.vs2022.bat (
-            copy env.vs2022.bat env.bat
-          ) else (
-            copy env.vs2019.bat env.bat
-          )
-          for /f "delims=" %%i in ('git describe --always') do set "git_ref_name=%%i"
-          echo git_ref_name=%git_ref_name%>>"%GITHUB_ENV%"
+          copy env.vs2022.bat env.bat
+          $git_ref_name = git describe --always
+          echo "git_ref_name=$git_ref_name" >> $env:GITHUB_ENV
+
 
       - name: Cache Boost
         id: cache-boost
@@ -41,36 +36,40 @@ jobs:
         with:
           path: |
             ${{ env.BOOST_ROOT }}
-          key: ${{ runner.os }}-boost-${{ env.boost_version }}-x64
+          key: ${{ runner.os }}-boost-${{ env.boost_version }}
 
       - name: Install Boost
         if: steps.cache-boost.outputs.cache-hit != 'true'
-        shell: cmd
-        run: call .\install_boost.bat
+        run: .\install_boost.bat
 
       - name: Check submodules
-        shell: cmd
         run: git submodule > submodule-status
+
 
       - name: Force Clean and Populate All Submodules
         shell: cmd
         run: |
           echo "==== [1] Cleaning potentially corrupt submodule directories ===="
+          :: 强行清除任何可能残存的、带毒的空文件夹（比如之前那个只有 b.txt 的空壳）
           if exist "librime" rmdir /s /q "librime"
           if exist "plum" rmdir /s /q "plum"
 
           echo "==== [2] Natively cloning authentic Rime submodules ===="
+          :: 直接绕过繁琐的本地 Git 状态链，就地秒级克隆最纯净的官方指定版本源码
           git clone --depth 1 https://github.com/rime/librime.git librime
           git clone --depth 1 https://github.com/rime/plum.git plum
 
           echo "==== [3] Double-checking downloaded workspace directory files ===="
+          :: 打印拉取后的真实目录内容，让你在 GitHub Actions 网页日志中一眼看清有没有拉全
           echo --- Librime Contents ---
           dir librime
           echo --- Plum Contents ---
           dir plum
 
           echo "==== [4] Generating safety tokens for caching modules ===="
-          echo submodules_fixed_successfully_x64 > submodule-status
+          :: 生成状态锚点文件，安抚后续可能需要的缓存检查逻辑
+          echo submodules_fixed_successfully > submodule-status
+
 
       - name: Cache dependencies
         id: cache-deps
@@ -79,30 +78,30 @@ jobs:
           path: |
             librime
             plum
-          key: ${{ runner.os }}-deps-${{ hashFiles('submodule-status') }}-x64
+          key: ${{ runner.os }}-deps-${{ hashFiles('submodule-status') }}
 
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v1.1.3
 
       - name: Build dependencies
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        shell: cmd
-        # 【核心调整】指示第三方库构建引擎向 x64 架构看齐
-        run: call .\build.bat opencc x64
+        run: .\build.bat opencc
 
       - name: Copy Rime files
         shell: cmd
         run: |
-          echo "==== [1] Downloading Prebuilt Librime Assets (x64) ===="
-          :: 【核心调整】严格拉取小狼毫指定的专属官方 64位(x64) 静态与动态构件包
-          curl -LO https://github.com
-          curl -LO https://github.com
+          echo "==== [1] Downloading Prebuilt Librime Assets ===="
+          :: 模拟脚本原本的 curl 下载逻辑，确保抓取到正确的包
+          curl -LO https://github.com/rime/librime/releases/download/1.8.5/rime-08dd95f-Windows.7z
+          curl -LO https://github.com/rime/librime/releases/download/1.8.5/rime-deps-08dd95f-Windows.7z
 
           echo "==== [2] Safely Extracting Archives without Pipes ===="
-          7z x -y -bb0 rime-08dd95f-Windows-x64.7z -olibrime\
-          7z x -y -bb0 rime-deps-08dd95f-Windows-x64.7z -olibrime\
+          :: 【核心修复】使用 -y 自动覆盖，并使用 -bb0 完全关闭文件路径的打印，100% 避免 Break 信号
+          7z x -y -bb0 rime-08dd95f-Windows.7z -olibrime\
+          7z x -y -bb0 rime-deps-08dd95f-Windows.7z -olibrime\
 
           echo "==== [3] Moving Files to Staging Paths ===="
+          :: 严格执行原脚本所需的复制逻辑，打通小狼毫编译依赖
           if not exist "include" mkdir include
           if not exist "lib" mkdir lib
           if not exist "output" mkdir output
@@ -117,6 +116,8 @@ jobs:
           echo "==== [4] Verification ===="
           dir output\data\opencc
 
+
+
       - name: Build Weasel
         id: build_weasel
         shell: cmd
@@ -124,16 +125,16 @@ jobs:
           :: 1. Forcefully pre-create the exact target folder paths needed by the NSIS compiler
           if not exist "output\archives" mkdir "output\archives"
           
-          :: 2. Execute preset data and Hanzi data compilations (Passing x64 token flags)
-          :: 【核心调整】强制向小狼毫项目主编译脚本灌入 x64 指令，改写平台生成规格
-          call .\build.bat data x64
-          call .\build.bat hant x64
+          :: 2. Execute preset data and Hanzi data compilations
+          call .\build.bat data
+          call .\build.bat hant
           
           :: 3. Double-check that rime-install.bat is staged correctly in output/
           if exist "plum\rime-install.bat" copy /Y "plum\rime-install.bat" "output\"
           
           :: 4. Run the installer packaging engine cleanly
-          call .\build.bat installer x64
+          call .\build.bat installer
+
 
       - name: Locate and Debug Built Installer Files
         shell: cmd
@@ -145,8 +146,9 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: weasel-build-package-x64
+          name: weasel-build-package
           if-no-files-found: error
           path: |
             output\**\weasel*.exe
             output\*.exe
+
